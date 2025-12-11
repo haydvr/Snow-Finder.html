@@ -5,35 +5,25 @@
     <title>Snow Finder</title>
 
     <style>
-
-        /* ---------------------------------------------------
-           DARK GRAY BACKGROUND
-           --------------------------------------------------- */
         body {
             margin: 0;
             overflow: hidden;
-            background: #8e8e8e;
+            background: #6e6e6e; /* darker gray */
             font-family: Arial, sans-serif;
         }
 
-        /* ---------------------------------------------------
-           SNOWFLAKES
-           --------------------------------------------------- */
         .flake {
             position: absolute;
             font-size: 28px;
             color: white;
             opacity: 0.95;
-
             animation-name: fall;
             animation-timing-function: linear;
             animation-iteration-count: infinite;
-
             z-index: 2;
             pointer-events: none;
         }
 
-        /* bobbing + falling */
         @keyframes fall {
             0%   { transform: translate(0px, 0px); }
             25%  { transform: translate(20px, 25vh); }
@@ -42,9 +32,6 @@
             100% { transform: translate(0px, 100vh); }
         }
 
-        /* ---------------------------------------------------
-           UI
-           --------------------------------------------------- */
         #ui {
             position: relative;
             z-index: 5;
@@ -59,11 +46,15 @@
             font-weight: bold;
         }
 
+        #snowAmount {
+            font-size: 24px;
+            margin-top: 10px;
+        }
+
         #loading {
             font-size: 20px;
         }
 
-        /* container for flakes */
         #flakes {
             position: fixed;
             top: 0;
@@ -73,27 +64,21 @@
             z-index: 2;
             pointer-events: none;
         }
-
     </style>
 </head>
 
 <body>
 
-    <!-- SNOWFLAKES -->
     <div id="flakes"></div>
 
-    <!-- UI -->
     <div id="ui">
         <h1>Snow Finder</h1>
         <div id="loading">Getting location…</div>
         <div id="status"></div>
+        <div id="snowAmount"></div>
     </div>
 
     <script>
-
-        /* ---------------------------------------------------
-           SNOWFLAKE CREATOR
-           --------------------------------------------------- */
 
         const flakeCount = 45;
 
@@ -104,21 +89,16 @@
                 let f = document.createElement("div");
                 f.className = "flake";
                 f.innerHTML = "❄️";
-
                 f.style.left = Math.random() * window.innerWidth + "px";
                 f.style.top = Math.random() * -200 + "px";
-
                 f.style.animationDuration = (4 + Math.random() * 4) + "s";
-
                 container.appendChild(f);
             }
         }
 
         createFlakes();
 
-        /* ---------------------------------------------------
-           WEATHER FORECAST (NOAA)
-           --------------------------------------------------- */
+        /* ------------------ NOAA WEATHER ------------------ */
 
         if (!navigator.geolocation) {
             document.getElementById("loading").innerText = "Location not supported.";
@@ -138,41 +118,68 @@
 
             fetch(`https://api.weather.gov/points/${lat},${lon}`)
                 .then(r => r.json())
-                .then(data => {
-                    const forecastURL = data.properties.forecast;
-                    return fetch(forecastURL);
-                })
+                .then(data => fetch(data.properties.forecast))
                 .then(r => r.json())
-                .then(data => {
-                    const periods = data.properties.periods;
-
-                    const snowKeywords = ["snow", "flurries", "wintry", "ice", "mix"];
-                    let foundSnow = false;
-
-                    for (let p of periods) {
-                        const desc = p.detailedForecast.toLowerCase();
-                        if (snowKeywords.some(k => desc.includes(k))) {
-                            foundSnow = true;
-                            break;
-                        }
-                    }
-
-                    showResult(foundSnow);
-                })
+                .then(data => processForecast(data.properties.periods))
                 .catch(() => {
                     document.getElementById("loading").innerText = "Forecast error.";
                 });
         }
 
-        function showResult(snow) {
+        function processForecast(periods) {
+            const snowWords = ["snow", "flurries", "wintry"];
+            let foundSnow = false;
+            let amounts = [];
+
+            for (let p of periods) {
+                const desc = p.detailedForecast.toLowerCase();
+
+                if (snowWords.some(w => desc.includes(w))) {
+                    foundSnow = true;
+
+                    // extract inches
+                    let matches = desc.match(/(\d+(\.\d+)?)\s?(to|-)\s?(\d+(\.\d+)?)[ ]?inches?/);
+                    if (matches) {
+                        amounts.push(matches[0]);
+                        continue;
+                    }
+
+                    // pattern: "2 inches", "4 inch"
+                    matches = desc.match(/(\d+(\.\d+)?)\s?inches?/);
+                    if (matches) {
+                        amounts.push(matches[0]);
+                        continue;
+                    }
+
+                    // "less than 1 inch"
+                    matches = desc.match(/less than 1 inch/);
+                    if (matches) {
+                        amounts.push("less than 1 inch");
+                    }
+                }
+            }
+
+            showResult(foundSnow, amounts);
+        }
+
+        function showResult(snow, amounts) {
             document.getElementById("loading").style.display = "none";
 
             const status = document.getElementById("status");
+            const snowAmount = document.getElementById("snowAmount");
 
-            if (snow) {
-                status.innerHTML = "❄️ Snow Expected This Week";
-            } else {
+            if (!snow) {
                 status.innerHTML = "☀️ No Snow Expected";
+                snowAmount.innerHTML = "";
+                return;
+            }
+
+            status.innerHTML = "❄️ Snow Expected This Week";
+
+            if (amounts.length > 0) {
+                snowAmount.innerHTML = "Estimated snow: " + amounts[0];
+            } else {
+                snowAmount.innerHTML = "Estimated snow: not specified";
             }
         }
 
