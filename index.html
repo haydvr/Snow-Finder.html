@@ -54,7 +54,7 @@ function resizeCanvas() {
     canvas.height = window.innerHeight;
 }
 resizeCanvas();
-window.onresize = resizeCanvas;
+window.addEventListener('resize', resizeCanvas);
 
 // -------------------------------
 // SNOWFLAKES
@@ -110,19 +110,14 @@ async function checkSnow() {
         const response = await fetch("https://wttr.in/?format=j1");
         const data = await response.json();
 
-        let weather = data.weather;
+        let weather = data.weather || [];
         let willSnow = false;
         let snowAmount = 0;
 
         for (let day of weather) {
-            for (let hour of day.hourly) {
-
-                // FIX: check multiple forms wttr.in uses
-                let chance =
-                    parseInt(hour.chanceofsnow || hour.chance_of_snow || "0");
-
-                let amount =
-                    parseFloat(hour.snow_mm || hour.snowCM || hour.snowIn || "0");
+            for (let hour of day.hourly || []) {
+                let chance = parseInt(hour.chanceofsnow || hour.chance_of_snow || "0");
+                let amount = parseFloat(hour.snow_mm || "0");
 
                 if (chance > 0 || amount > 0) {
                     willSnow = true;
@@ -133,10 +128,10 @@ async function checkSnow() {
 
         const box = document.getElementById("infoBox");
 
-        if (willSnow) {
-            let inches = (snowAmount / 25.4).toFixed(1);
-            if (inches <= 0) inches = "Trace";
+        let inchesNum = snowAmount / 25.4;
+        let inches = inchesNum <= 0 ? "Trace" : inchesNum.toFixed(1);
 
+        if (willSnow) {
             box.textContent = `❄ Snow Expected! Estimated: ${inches} inches`;
         } else {
             box.textContent = `No Snow Expected`;
@@ -144,6 +139,7 @@ async function checkSnow() {
 
     } catch (e) {
         document.getElementById("infoBox").textContent = "Error loading forecast";
+        console.error("Snow forecast error:", e);
     }
 }
 
