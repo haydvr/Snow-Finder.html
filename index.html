@@ -7,11 +7,14 @@
     body {
         margin: 0;
         padding: 0;
-        background: #2f2f2f; /* darker gray */
         overflow: hidden;
         font-family: Arial, sans-serif;
         color: white;
         text-align: center;
+
+        /* Full-screen background image */
+        background: url("background.jpg") no-repeat center center fixed;
+        background-size: cover;
     }
 
     #infoBox {
@@ -29,6 +32,7 @@
         position: absolute;
         top: 0;
         left: 0;
+        pointer-events: none;
     }
 </style>
 </head>
@@ -39,13 +43,10 @@
 
 <script>
 // -------------------------------
-// ❄ USER SETTINGS
+// USER SETTINGS
 // -------------------------------
-const SNOW_DENSITY = 220;   // Change to 50 (light), 200 (normal), 400 (heavy)
+const SNOW_DENSITY = 220;   // 50 = light, 200 = normal, 400 = heavy
 
-// -------------------------------
-// AUTO-RESIZE CANVAS
-// -------------------------------
 const canvas = document.getElementById("snowCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -57,7 +58,7 @@ resizeCanvas();
 window.onresize = resizeCanvas;
 
 // -------------------------------
-// ❄ SMOOTH SNOWFLAKE CLASS
+// SMOOTH SNOWFLAKE CLASS
 // -------------------------------
 class Snowflake {
     constructor() {
@@ -70,26 +71,19 @@ class Snowflake {
 
         this.size = Math.random() * 3 + 2;
 
-        // smoother fall speed
         this.speed = Math.random() * 0.8 + 0.6;
 
-        // smoother sideways motion
         this.angle = Math.random() * Math.PI * 2;
         this.angleSpeed = Math.random() * 0.015 + 0.008;
 
-        // distance of sideways glide
         this.swing = Math.random() * 1.5 + 0.8;
     }
 
     update() {
-        // very smooth sine-wave motion
         this.angle += this.angleSpeed;
         this.x += Math.sin(this.angle) * this.swing;
-
-        // smooth falling
         this.y += this.speed;
 
-        // wrap to top
         if (this.y > canvas.height + 5) {
             this.reset();
             this.y = -10;
@@ -98,15 +92,12 @@ class Snowflake {
 
     draw() {
         ctx.fillStyle = "white";
-
-        // smoother, softer edges
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
-// generate flakes
 let snowflakes = [];
 for (let i = 0; i < SNOW_DENSITY; i++) {
     snowflakes.push(new Snowflake());
@@ -116,9 +107,7 @@ for (let i = 0; i < SNOW_DENSITY; i++) {
 // SUPER SMOOTH ANIMATION LOOP
 // -------------------------------
 function animateSnow() {
-    // smooth fade instead of hard wipe
-    ctx.fillStyle = "rgba(47,47,47,0.4)"; // 0.3–0.5 gives trailing effect
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (let s of snowflakes) {
         s.update();
@@ -131,7 +120,7 @@ animateSnow();
 
 
 // -------------------------------
-// 🌨 WEATHER CHECK (FREE API)
+// WEATHER CHECK (FREE API)
 // -------------------------------
 async function checkSnow() {
     try {
